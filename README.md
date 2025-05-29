@@ -25,8 +25,7 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
   
 &#x1F53A; Be careful to correctly set your working directory in Python codes and Rscripts.
 
-&#x1F53A; Before running the code, in the folders named as 'normaldata', 'anomaly_v2', 'encoded_normal' and 'encoded_anomaly', you need to put datasets downloadable in following repository:
-https://drive.google.com/file/d/11lWCY7f5yyyHADp78Ybf1H9IIxRjC0QF/view?usp=sharing
+&#x1F53A; Before running the code, in the folders named as 'normaldata', 'anomaly_v2', 'encoded_normal' and 'encoded_anomaly', you need to put datasets downloadable in following repository: https://drive.google.com/file/d/1Y9ZxyqzBGjjiRtgRJfm-O4WWZFSYDG3Q/view?usp=sharing
 
 ## References
 
