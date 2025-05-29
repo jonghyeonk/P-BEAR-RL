@@ -16,7 +16,7 @@ For the real life logs, we consider (1) the Road Traffic event log which collect
 For all logs, we injected 5 types of anomaly patterns including "insert", "skip", "moved", "replace", and "rework" introduced in [4]. The statistics of datasets are summarised in Table 1 in our paper.
 
 ## How To Implement P-BEAR-RL:
-- main.py: in terminal, run "python main.py --data 'Small' --num_epi 1000 --alpha 0", then you will get a repaired log in "~/output" folder.
+- main.py: in terminal, if you run "python main.py --data 'Small' --num_epi 1000 --alpha 0", then you will get a repaired log of the 'Small' data in "~/output" folder.
 - pattern_recognition.ipynb: this script will add a prediction of anomalous patterns (i.e., anomalous pattern recognition) to the repaired log in "~/output" folder.
 - see_performance.R : after implementing "pattern_recognition.ipynb", this Rscript summarizes performance (ACC and REC) and save the performance in "~/performance" folder. The entire performance can be see in our paper.
 
