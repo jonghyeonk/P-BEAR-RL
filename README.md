@@ -1,38 +1,35 @@
-# Anomaly Reconstruction for Business Process Event Logs
+# A Reinforcement Learning Framework for Event Log Anomaly Detection and Repair
 
 This repository shows an extended version of the Pattern-based Anomaly Reconstruction (PBAR) method [1].
 
-(We are preparing to submit a paper for this extended version to a journal.)
+(We are preparing to submit a paper of this extended version to a conference.)
 
-## Prepared Data1 - 5 artificial logs
+## Prepared Data1 - 5 artificial logs (Small, Medium, Large, Huge, Wide)
 We used 5 types of process models including small, medium, large, huge, and wide refered from [2] to generate artificial logs.
 
-## Prepared Data2 - 2 artificial logs
+## Prepared Data2 - 2 artificial logs (credit-card, mccloud) (named as Credit, Pub in our paper)
 We used two process models (credit-card & Pub) refered from [3] to generate artificial logs.
 
-## Prepared Data3 - 4 real-life logs
-For the real life logs, we consider (1) the Hospital Billing event log containing events about the billing of medical services that have been obtained from the financial modules of the ERP system of a regional hospital, (2) the Road Traffic event log which collects events about a road traffic fine management process at a local police authority in Italy, and (3-4) BPIC 2012 and BPIC 2017 which are benchmard datasets in Process Mining academia.
+## Prepared Data3 - 2 real-life logs (Road_Traffic, b17)
+For the real life logs, we consider (1) the Road Traffic event log which collects events about a road traffic fine management process at a local police authority in Italy and (2) BPIC 2017 which is a benchmard dataset in Process Mining academia.
 
 For all logs, we injected 5 types of anomaly patterns including "insert", "skip", "moved", "replace", and "rework" introduced in [4]. The statistics of datasets are summarised in Table 1 in our paper.
 
+## How To Implement P-BEAR-RL:
+- main.py: in terminal, if you run "python main.py --data 'Small' --num_epi 1000 --alpha 0", then you will get a repaired log of the 'Small' data in "~/output" folder.
+- pattern_recognition.ipynb: this script will add a prediction of anomalous patterns (i.e., anomalous pattern recognition) to the repaired log in "~/output" folder. Therefore, run this script after you get a result from "main.py".
+- see_performance.R : after implementing "pattern_recognition.ipynb", this Rscript summarizes performance (ACC and REC) and save the performance in "~/performance" folder. The entire performance can be see in our paper.
 
-## R-files
-- PBAR/PBAR_effi.R : main function of PBAR
-- PBAR/algo_recon_effi.R : inner algorithms for reconstructing each anomaly pattern
-- PBAR/DiscoverNBG.R : function for fitting a reference model (normal behaviour graph)
-- PBAR/VotingMatrix.R : function of voting matrix
-- PBAR/0.preprocessing_for_sampleddata : to get normal data with different number of traces (represented in Fig.11)
-- PBAR/0.preprocessing_for_encoding : main preprecessing step
-- PBAR/1.implementation : to apply PBAR to the 11 total logs
-- PBAR/1.1.merge_result_alignment : to calculate the alignment result with same format of PBAR
-- PBAR/1.2.merge_result_deepalign : to calculate the deepalign result with same format of PBAR
-- PBAR/1.3.alpha_test_PBAR : to see results by changing the value of alpha parameter
-- PBAR/1.4.PBAR_with_PNUH : to apply PBAR to PNUH data (but, the PNUH data is not sharable)
+## How To Implement the baselines (Align_TR, Align.ED, DeepAlign):
+- For Aligner.TR & Aligner.ED, run ".../alignment/1.implementation_Alignment.py" file, then you will get a repaired log in ".../alignment/result_trd" & "~/alignment/result_edit" folder, respectively.
+- For DeepAlign, run ".../DeepAlign/1.implementation_DeepAlign.py" file, then you will get a repaired log in ".../DeepAlign/result" folder. The original code is refered from "https://github.com/tnolle/deepalign".
   
-&#x1F53A; Be careful to correctly set your working directory in Rscripts.
+&#x1F53A; Be careful to correctly set your working directory in Python codes and Rscripts.
 
-&#x1F53A; Before running the code, in the folders named as 'normaldata', 'anomaly_v2', 'encoded_normal' and 'encoded_anomaly', you need to put datasets downloadable in following repository:
-https://drive.google.com/file/d/11lWCY7f5yyyHADp78Ybf1H9IIxRjC0QF/view?usp=sharing
+&#x1F53A; Before running the code, in the folders named as 'normaldata', 'encoded_normal' and 'encoded_anomaly', you may need to put full datasets downloadable in following repository: https://drive.google.com/file/d/1Y9ZxyqzBGjjiRtgRJfm-O4WWZFSYDG3Q/view?usp=sharing
+
+## Detailed performance comparison
+
 
 ## References
 
