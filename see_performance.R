@@ -16,10 +16,10 @@ rate = '1.00'
 for(type in c('edit')){
   result= as.numeric()
   for(i in 1:length(rate)){
-  setwd(paste0(home, '/encoded_normal'))
+  setwd(paste0(home, '/input/encoded_normal'))
   test =  read.csv( paste(data, ".csv", sep=''),T)
 
-  setwd(paste0(home, '/encoded_anomaly'))
+  setwd(paste0(home, '/input/encoded_anomaly'))
   dat = read.csv(paste(data, "_", rate[i], ".csv", sep='' ),T)
 
   setwd(paste0(home, '/output'))

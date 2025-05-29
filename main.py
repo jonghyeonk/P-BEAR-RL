@@ -27,7 +27,7 @@ alpha = float(args.alpha)
 # alphas = [0, 0.01, 0.02, 0.03, 0.04, 0.05]
 
 # File directory
-anomalous_data_path = os.path.join(my_path, "encoded_anomaly", dat_name + "_1.00.csv")
+anomalous_data_path = os.path.join(my_path,"input", "encoded_anomaly", dat_name + "_1.00.csv")
 output_path = os.path.join(my_path, "output")
 os.makedirs(output_path, exist_ok=True)
 
