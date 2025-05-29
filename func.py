@@ -8,6 +8,9 @@ import plotly.io as pio
 import networkx as nx
 import matplotlib.pyplot as plt
 
+import matplotlib
+matplotlib.use('Agg')
+
 pio.renderers.default = 'iframe_connected'
 
 my_path = os.path.abspath('')
@@ -16,17 +19,6 @@ from PIL import Image, ImageDraw
 import random
 from matplotlib.colors import ListedColormap
 from collections import deque
-
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-
-# Check for CUDA availability and set device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
 def discover_NBG(clean, vis = False):
@@ -42,24 +34,20 @@ def discover_NBG(clean, vis = False):
     clean2 = clean[['case:concept:name', 'concept:name', 'order']].rename(columns={"concept:name": "from", "order": "level"}, copy=False)
     clean2['FROM'] = clean2['from'].astype(str) + '_' + clean2['level'].astype(str)
 
-    clean3 = clean2[clean2['from'] != 'End'].copy() # 'from' 컬럼 기준으로 'End' 제거
-    clean3['TO'] = clean3.groupby('case:concept:name', observed=True)['FROM'].shift(-1).fillna('End_inf') # 다음 액티비티를 'TO'로, 마지막은 'End_inf'로 처리
-    clean3 = clean3[clean3['TO'] != 'End_inf'].copy() # 마지막 'End_inf' 행 제거
-    clean3 = clean3[['case:concept:name', 'FROM', 'TO', 'level']].reset_index(drop=True)
+    # clean3 = clean2[clean2['from'] != 'End'].copy() # 'from' 컬럼 기준으로 'End' 제거
+    # clean3['TO'] = clean3.groupby('case:concept:name', observed=True)['FROM'].shift(-1).fillna('End_inf') # 다음 액티비티를 'TO'로, 마지막은 'End_inf'로 처리
+    # clean3 = clean3[clean3['TO'] != 'End_inf'].copy() # 마지막 'End_inf' 행 제거
+    # clean3 = clean3[['case:concept:name', 'FROM', 'TO', 'level']].reset_index(drop=True)
 
-    clean4 = clean3[['FROM', 'TO']].value_counts(dropna=False).reset_index(name='counts')
-
-    del clean3 # 더 이상 필요없는 DataFrame 삭제
+    # del clean3 # 더 이상 필요없는 DataFrame 삭제
 
     NBGs = []
     actset = clean['concept:name'].unique()
 
     for i in range(0, len(actset)):
         # print(actset[i])
-        globals()['variant_ele{}'.format(1)] = variant_freq[variant_freq['element'].apply(lambda x: actset[i] in x)]
-
-        cat_1 = globals()['variant_ele{}'.format(1)]
-        cat_1['duplicate'] = cat_1['element'].apply(lambda x: sum( pd.Series(actset[i]).isin(x) ) )
+        cat_1 = variant_freq[variant_freq['element'].apply(lambda x: actset[i] in x)]
+        cat_1['duplicate'] = cat_1['element'].apply(lambda x: sum( pd.Series(x).isin([actset[i]]) ) )
         cat_2 = pd.DataFrame( { 'var_id': np.repeat(cat_1['var_id'], cat_1['element'].apply(len)), 
                                 'concept:name': sum( cat_1['element'], []), 
                                 'counts': np.repeat(cat_1['counts'], cat_1['element'].apply(len))})
@@ -69,19 +57,18 @@ def discover_NBG(clean, vis = False):
         cat_2['level'] = cat_2a.cumcount() - cat_2a.transform(lambda x: (x.values).argmax())
 
         # 한 seq에 같은 activity가 2개 이상 존재하는 경우
-        if True in (cat_1['duplicate'] > 1 ):
-            for index, row in cat_1[cat_1['duplicate'] > 1].iterrows():
-                    
-                print(row['var_id'])
+        if sum(cat_1['duplicate'] > 1 )>0:
+            for index, row in cat_1[cat_1['duplicate'] > 1].iterrows(): 
                 # 신규 variant 생성
-                temp1 = cat_2[cat_2['var_id']==row['var_id']]
+                temp1 = cat_2[cat_2['var_id']== str(row['var_id'])]
                 cat_3 = pd.concat([temp1]*(row['duplicate']-1))
-                cat_3['var_id'] = [ "{}_dup_{}".format(a, b) for a, b in zip( cat_3['var_id'], range(0, len(temp1) ), row['duplicate']-1).astype(str) ]
+                cat_3['var_id'] = np.repeat([ "{}_dup_{}".format(a, b) for a, b in zip( list(cat_3['var_id']), range(0, row['duplicate']-1 ) ) ], len(temp1))
                 # base level 조정
-                locs = np.where(cat_3['concept:name'] == actset[i])
-                temp2 = np.repeat(locs, len(temp1))
-                cat_3['level'] = list(range(0,len(temp1)))*2 - temp2
+                locs = np.where(temp1['concept:name'] == actset[i])
+                temp2 = np.repeat(locs[0][1:], len(temp1))
+                cat_3['level'] = list(range(0,len(temp1)))*(row['duplicate']-1) - temp2
                 cat_2 = pd.concat( [cat_2, cat_3] )
+
 
         cat_3 = cat_2.rename(columns={"concept:name": "from"})
         cat_3['FROM'] = cat_3['from'] + '_' + cat_3['level'].astype(str)
@@ -185,6 +172,71 @@ def discover_pattern(episode_history):
     return str(df_explain['predict_patterns'].tolist())
 
 
+
+def process_case_id_wrapper(case_id_for_processing, # 첫 번째 인자는 Pool.map에서 오는 반복요소
+                        # 이하 고정 인자들
+                        p_anomaly_nolabel,
+                        p_filtered_actset,
+                        p_act_freq,
+                        p_actset,
+                        p_NBGs,
+                        p_num_epi, 
+                        alpha):
+
+    agent = QLearningAgent(p_filtered_actset ,  p_act_freq,learning_rate=0.1, discount_factor=0.9, exploration_rate=0.5, exploration_decay_rate=0.0001)
+    obs_case = p_anomaly_nolabel.loc[p_anomaly_nolabel['case:concept:name']  == case_id_for_processing].reset_index(drop=True)
+
+    env = P_BEAR_RL(obs_case, p_actset, p_filtered_actset, p_NBGs, alpha =alpha) # jh
+    episodes = p_num_epi
+    all_episode_histories = []
+
+    for episode in range(episodes):
+        state = env.reset()
+        total_reward = 0
+        steps = 0
+        done = False
+        game_over = False
+        episode_history = []
+
+        while not done and not game_over:
+            action = agent.select_action(state)
+            next_state, reward, done, game_over, info, loc, label_act, rework = env.step(action, max_step=8)
+
+            agent.update_q_value(state, action, reward, next_state)
+            agent.decay_exploration_rate()
+
+            total_reward += reward
+            steps += 1
+            if not done and (label_act != None): #jh
+                episode_history.append((state.copy(), env.action_labels[action].split('_')[0], loc, label_act, rework,reward, next_state.copy()))
+            state = next_state
+
+        if done and not game_over:
+            adm_last = env.ADM(next_state, 0 ,p_NBGs )
+            all_episode_histories.append((steps-1, np.sum(adm_last)/(len(adm_last)*len(adm_last[0])), episode_history))
+
+    if len(all_episode_histories)>0:
+        check_clean = [h[0] for h in all_episode_histories]
+        if max(check_clean)>0:   
+            shortest_episodes = [hist for hist in all_episode_histories if hist[0] == min(h[0] for h in all_episode_histories if h[0] > 0)] # 0 step 제외
+            best_episode = min(shortest_episodes, key=lambda x: x[1])
+            env.state = best_episode[2][-1][-1] 
+            env.state['predict_patterns'] = discover_pattern(best_episode[2])
+            case_result_df = env.state
+            # env.render()  # for visualization
+        else:
+            state = env.init_state
+            state['predict_patterns'] = ''
+            case_result_df = state
+    else:
+        state = env.init_state
+        state['predict_patterns'] = ''
+        case_result_df = state
+
+    return case_result_df
+
+
+
 # 강화 학습 환경
 class P_BEAR_RL:
     def __init__(self, case, actset, filtered_actset, NBGs, alpha):    
@@ -256,7 +308,7 @@ class P_BEAR_RL:
             return self.state, reward, done, game_over, {}, idx, act, rework
         else:
             if action == 0:  # remove
-                loc= min(indices_greater_than_one)
+                loc= random.sample(indices_greater_than_one, 1)[0]
                 if loc>0:
                     act = prev_state['concept:name'][loc]
                     idx = prev_state['order'][loc]
@@ -266,7 +318,7 @@ class P_BEAR_RL:
                         rework = True
                         
             elif action ==1:# remove
-                loc= min(indices_greater_than_one)+1
+                loc= random.sample(indices_greater_than_one, 1)[0]+1
                 if loc < len(prev_state)-1:
                     act = prev_state['concept:name'][loc]
                     idx = prev_state['order'][loc]
@@ -278,7 +330,7 @@ class P_BEAR_RL:
                         
             elif action > 1:  # inject
 
-                loc = min(indices_greater_than_one)+1
+                loc = random.sample(indices_greater_than_one, 1)[0]+1
                 idx = prev_state['order'][loc-1] +1
                 cut1 = prev_state.loc[0:(loc-1)]
                 cut2 = prev_state.loc[loc:len(prev_state)]
@@ -289,19 +341,21 @@ class P_BEAR_RL:
                 self.state = repaired_case
                 loc= loc-1
                 
+                
+                
             indices_greater_than_one_new = self.loc_anomalies(self.state)  
 
             if len(indices_greater_than_one_new) < len(indices_greater_than_one):
-                reward += 10 - self.current_step  # 10 * 0.5 * np.exp(-0.5 * self.current_step)
+                reward += 5 - self.current_step  # 10 * 0.5 * np.exp(-0.5 * self.current_step)
             elif len(indices_greater_than_one_new) == len(indices_greater_than_one):
-                reward -= 5
+                reward -= 1
             else:
-                reward -= 10
+                reward -= 5
                 # game_over = True
 
             if self.current_step > max_step :  # 최대 스텝 제한
                 game_over = True
-                reward -= 50
+                reward -= 10
 
             if len(self.state) < 4:
                 game_over = True
@@ -380,284 +434,3 @@ class QLearningAgent:
         
         
         
-
-class P_BEAR_DRL:
-    def __init__(self, case, actset, filtered_actset, NBGs, alpha = 0):
-        self.init_state = case
-        self.state = case
-        self.filtered_actset = filtered_actset # new
-        self.actset = actset
-        self.action_space = list(range(len(filtered_actset) + 2))  # 0~1: remove, 2+: insert
-        self.action_labels = ["remove_A", "remove_B"]  +  [f'inject_{item}' for item in filtered_actset]
-        self.initial_anomalies = np.sum(self.ADM(case,  threshold=alpha, NBGs=NBGs), axis=0)
-        self.current_step = 0
-        self.NBGs =NBGs # new
-        self.alpha = alpha
-
-    def ADM(self, obs_case, threshold, NBGs):
-        actlist = obs_case['concept:name'].tolist()
-        invalid_act = [act for act in actlist if act not in self.actset]
-        v_matrix = []
-        for order, act in enumerate(actlist):
-            if act not in invalid_act:
-                edge_inTrace = [tuple([actlist[temp] + '_' + str(temp - order), actlist[temp + 1] + '_' + str(temp + 1 - order)]) for temp in range(len(actlist) - 1)]
-                voting_NBG = NBGs[np.where(self.actset == act)[0][0]]
-                edge_labels = nx.get_edge_attributes(voting_NBG, 'likelihood') if voting_NBG else {}
-                valid_edge = [edge for edge, likelihood in edge_labels.items() if likelihood > threshold]
-                vote = [0 if temp in valid_edge else 1 for temp in edge_inTrace]
-                past_vote = vote[:order]
-                post_vote = vote[order:]
-                past_vote = (np.cumsum(np.cumsum(past_vote[::-1])) == 1).astype(int)[::-1]
-                post_vote = (np.cumsum(np.cumsum(post_vote)) == 1).astype(int)
-                vote = past_vote.tolist() + post_vote.tolist()
-                v_matrix.append(vote)
-        return v_matrix
-
-    def loc_anomalies(self, mat):
-        anomalous_edge = np.sum(self.ADM(obs_case=mat, threshold= self.alpha, NBGs=self.NBGs), axis=0)
-        indices_greater_than_one = np.where(anomalous_edge > 1)[0].tolist()
-        return indices_greater_than_one
-
-    def reset(self):
-        self.state = self.init_state.copy()
-        self.current_step = 0
-        return self.state
-
-    def _is_done(self):
-        indices_greater_than_one = self.loc_anomalies(self.state)
-        return (indices_greater_than_one== 0)
-    
-    def step(self, action, max_step=10):
-        self.current_step += 1
-        reward = -1
-        done = False
-        game_over = False
-        rework = False
-        idx = 0
-        act = None
-        
-        prev_state = self.state.copy()
-        indices_greater_than_one = self.loc_anomalies(prev_state)
-
-        if not indices_greater_than_one:
-            done = True
-            return self.state, reward, done, game_over, {}, idx, act, rework
-        else:
-            if action == 0:  # remove
-                loc= min(indices_greater_than_one)
-                if loc>0:
-                    act = prev_state['concept:name'][loc]
-                    idx = prev_state['order'][loc]
-                    repaired_case = prev_state.drop(index= loc).reset_index(drop=True)
-                    self.state = repaired_case
-                    if act == prev_state['concept:name'][loc+1]:
-                        rework = True 
-                
-            elif action ==1:# remove
-                loc= min(indices_greater_than_one)+1
-                if loc < len(prev_state)-1:
-                    act = prev_state['concept:name'][loc]
-                    idx = prev_state['order'][loc]
-                    repaired_case = prev_state.drop(index= loc).reset_index(drop=True)
-                    self.state = repaired_case
-                    if act == prev_state['concept:name'][loc-1]:
-                        rework = True 
-                        
-            elif action > 1:  # inject
-
-                loc = min(indices_greater_than_one)+1
-                idx = prev_state['order'][loc-1]
-                cut1 = prev_state.loc[0:(loc-1)]
-                cut2 = prev_state.loc[loc:len(prev_state)]
-                insert = prev_state.loc[0:0]
-                insert['concept:name'] = self.filtered_actset[action-2]  
-                act = self.filtered_actset[action-2]  
-                repaired_case = pd.concat([cut1, insert, cut2]).reset_index(drop=True)
-                self.state = repaired_case
-                
-                
-            indices_greater_than_one_new = self.loc_anomalies(self.state)
-
-            if len(indices_greater_than_one_new) < len(indices_greater_than_one):
-                reward += 5 - self.current_step
-            elif len(indices_greater_than_one_new) == len(indices_greater_than_one):
-                reward -= 1
-            else:
-                reward -= 5
-
-            if self.current_step > max_step:
-                game_over = True
-                reward -= 10
-
-            if len(self.state) < 4:
-                game_over = True
-
-            done = self._is_done()
-
-            return self.state, reward, done, game_over, {}, idx, act, rework
-
-    def render(self):
-        matrix_np = np.array(self.ADM(self.state, threshold= self.alpha, NBGs=self.NBGs))
-        colors = ['white', 'red']
-        cmap = ListedColormap(colors)
-        plt.imshow(matrix_np, cmap=cmap, vmin=0, vmax=1)
-        plt.title('Anomaly Detection Matrix')
-        plt.colorbar(label='(0: normal, 1: anomaly)')
-        plt.xticks([])
-        plt.yticks([])
-        plt.show()
-
-
-
-# Deep Q-Network (DQN)
-class DQN(nn.Module):
-    def __init__(self, state_size, action_space):
-        super(DQN, self).__init__()
-        self.fc1 = nn.Linear(state_size, 64)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, len(action_space))
-
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        return self.fc3(x)
-
-# Replay Buffer
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def push(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        state, action, reward, next_state, done = zip(*random.sample(self.buffer, batch_size))
-        return np.array(state), action, reward, np.array(next_state), done
-
-    def __len__(self):
-        return len(self.buffer)
-
-
-def preprocess_state(state_raw, max_len, vocabulary_source_actset):
-
-    if not hasattr(vocabulary_source_actset, '__iter__') or not vocabulary_source_actset:
-        raise ValueError("'vocabulary_source_actset' must be a non-empty iterable (list or set) of activity names.")
-
-    # 1. 어휘 생성 (일관성을 위해 정렬)
-    unique_activities_sorted = sorted(list(set(vocabulary_source_actset)))
-    activity_to_idx = {activity_name: i for i, activity_name in enumerate(unique_activities_sorted)}
-    num_known_activities = len(unique_activities_sorted)
-    
-    # 어휘에 없는 활동(unknown activity)을 위한 인덱스
-    unknown_activity_idx = num_known_activities
-
-    # 2. state_raw에서 활동 시퀀스 추출 및 빈 상태 처리
-    if 'concept:name' not in state_raw.columns or state_raw['concept:name'].empty:
-        # 어휘 크기 + 1 (unknown token) 만큼의 원-핫 인코딩 차원
-        one_hot_depth = num_known_activities + 1
-        return np.zeros(max_len * one_hot_depth, dtype=np.float32)
-
-    activities = state_raw['concept:name'].tolist()
-
-    # 3. 활동 이름을 정수 인덱스로 변환
-    indexed_activities = [activity_to_idx.get(act, unknown_activity_idx) for act in activities]
-
-    # 4. 시퀀스 패딩/자르기
-    padded_sequence = pad_sequences(
-        [indexed_activities], 
-        maxlen=max_len, 
-        padding='post', 
-        truncating='post',
-        value=0 # 패딩에 사용될 값 (기본값은 0)
-    )[0] # batch 차원 제거
-
-    # 5. 원-핫 인코딩
-    # 원-핫 벡터의 차원: 알려진 활동의 수 + 1 (unknown 활동을 위함)
-    one_hot_depth = num_known_activities + 1
-    one_hot_encoded_state = np.zeros((max_len, one_hot_depth), dtype=np.float32)
-
-    for i, activity_idx_in_sequence in enumerate(padded_sequence):
-        # activity_idx_in_sequence는 0 (패딩 또는 첫 번째 활동)부터
-        # num_known_activities (unknown 활동)까지의 값을 가질 수 있습니다.
-        if 0 <= activity_idx_in_sequence < one_hot_depth:
-            one_hot_encoded_state[i, activity_idx_in_sequence] = 1.0
-    
-    # 6. 최종 벡터를 flatten 하여 1D로 만듦
-    return one_hot_encoded_state.flatten()
-
-
-class DQNAgent:
-    def __init__(self, state_size, filtered_actset , act_freq, learning_rate=0.001, discount_factor=0.99,
-                 exploration_rate=1.0, exploration_decay_rate=0.00005, exploration_min=0.01,
-                 replay_buffer_capacity=10000, batch_size=64):
-        
-        self.filtered_actset = filtered_actset
-        self.act_freq = act_freq
-        self.state_size = state_size
-        self.action_space = list(range(len(filtered_actset)+2))
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
-        self.exploration_rate = exploration_rate
-        self.exploration_decay_rate = exploration_decay_rate
-        self.exploration_min = exploration_min
-        self.batch_size = batch_size
-        self.replay_buffer = ReplayBuffer(replay_buffer_capacity)
-        self.policy_net = DQN(state_size, self.action_space).to(device)
-        self.target_net = DQN(state_size, self.action_space).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.target_net.eval()
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=self.learning_rate)
-        self.criterion = nn.MSELoss()
-        self.tau = 0.005 # For soft target update
-
-    def select_action(self, state):
-        if random.random() < self.exploration_rate:
-            if random.random() < 0.5: # remove
-                return random.choice([0, 1])
-            else:
-                # Placeholder for act_freq if it's needed for exploration
-                # In a DRL setting, exploration is often uniform or based on the Q-values
-                return random.choices(range(2,len(self.filtered_actset)+2), weights= self.act_freq.prob, k=1)[0]
-                # return random.choice(range(2, len(self.action_space)))
-        else:
-            with torch.no_grad():
-                state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
-                q_values = self.policy_net(state_tensor)
-                return np.argmax(q_values.cpu().numpy())
-
-    def store_transition(self, state, action, reward, next_state, done):
-        self.replay_buffer.push(state, action, reward, next_state, done)
-
-    def decay_exploration_rate(self):
-        self.exploration_rate = max(self.exploration_min, self.exploration_rate - self.exploration_decay_rate)
-
-    def learn(self):
-        if len(self.replay_buffer) < self.batch_size:
-            return
-
-        states, actions, rewards, next_states, dones = self.replay_buffer.sample(self.batch_size)
-
-        state_batch = torch.tensor(states, dtype=torch.float32).to(device)
-        action_batch = torch.tensor(actions, dtype=torch.long).unsqueeze(1).to(device)
-        reward_batch = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(device)
-        next_state_batch = torch.tensor(next_states, dtype=torch.float32).to(device)
-        done_mask = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(device)
-
-        current_q_values = self.policy_net(state_batch).gather(1, action_batch)
-        next_q_values = self.target_net(next_state_batch).max(1)[0].unsqueeze(1)
-        expected_q_values = reward_batch + (1 - done_mask) * self.discount_factor * next_q_values
-
-        loss = self.criterion(current_q_values, expected_q_values)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 100) # Gradient clipping
-        self.optimizer.step()
-
-        self.soft_update(self.policy_net, self.target_net, self.tau)
-
-    def soft_update(self, local_model, target_model, tau):
-        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-            target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)
-
