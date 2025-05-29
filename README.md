@@ -28,6 +28,9 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
 
 &#x1F53A; Before running the code, in the folders named as 'normaldata', 'encoded_normal' and 'encoded_anomaly', you may need to put full datasets downloadable in following repository: https://drive.google.com/file/d/1Y9ZxyqzBGjjiRtgRJfm-O4WWZFSYDG3Q/view?usp=sharing
 
+## Detailed performance comparison
+
+
 ## References
 
 [1] Ko, J., & Comuzzi, M. (2022). Pattern-based Reconstruction of Anomalous Traces in Business Process Event Logs. Proceedings of the 1st International Workshop on Computational Intelligence for Process Mining (CI4PM) and the 1st International Workshop on Pervasive Artificial Intelligence (PAI), co-located with the IEEE World Congress on Computational Intelligence (WCCI).
