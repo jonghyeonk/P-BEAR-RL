@@ -2,7 +2,7 @@
 
 This repository shows an extended version of the Pattern-based Anomaly Reconstruction (PBAR) method [1].
 
-(We are preparing to submit a paper for this extended version to a conference.)
+(We are preparing to submit a paper of this extended version to a conference.)
 
 ## Prepared Data1 - 5 artificial logs (Small, Medium, Large, Huge, Wide)
 We used 5 types of process models including small, medium, large, huge, and wide refered from [2] to generate artificial logs.
