@@ -30,6 +30,10 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
 
 ## Detailed performance comparison
 
+[📄 View Project Documentation (PDF)](additional_performance.pdf)
+
+[➡️ View the Embedded PDF Here](https://<your-username>.github.io/<your-repo-name>/datasheet.html)
+
 
 ## References
 
