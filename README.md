@@ -21,8 +21,8 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
 - see_performance.R : after implementing "pattern_recognition.ipynb", this Rscript summarizes performance (ACC and REC) and save the performance in "~/performance" folder. The entire performance can be see in our paper.
 
 ## How To Implement the baselines (Align_TR, Align.ED, DeepAlign):
-- For Aligner.TR & Aligner.ED, run "~/alignment/1.implementation_Alignment.py" file, then you will get a repaired log in "~/alignment/result_trd" & "~/alignment/result_edit" folder, respectively.
-- For DeepAlign, run "~/DeepAlign/1.implementation_DeepAlign.py" file, then you will get a repaired log in "~/DeepAlign/result" folder. The original code is refered from "https://github.com/tnolle/deepalign".
+- For Aligner.TR & Aligner.ED, run ".../alignment/1.implementation_Alignment.py" file, then you will get a repaired log in ".../alignment/result_trd" & "~/alignment/result_edit" folder, respectively.
+- For DeepAlign, run ".../DeepAlign/1.implementation_DeepAlign.py" file, then you will get a repaired log in ".../DeepAlign/result" folder. The original code is refered from "https://github.com/tnolle/deepalign".
   
 &#x1F53A; Be careful to correctly set your working directory in Python codes and Rscripts.
 
