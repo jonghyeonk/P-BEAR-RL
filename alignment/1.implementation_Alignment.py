@@ -1,25 +1,22 @@
 #For PM4PY
 
 import os
-import tensorflow as tf
 
 my_path = os.path.abspath('') 
-parent_path = os.chdir("..")
+parent_path = os.path.dirname(my_path)
 
-import pm4py
 from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.algo.discovery.inductive import algorithm as inductive_miner
 from pm4py.algo.conformance.alignments.petri_net import algorithm
 import pandas as pd
-import numpy
+import numpy as np
 import datetime
-from pm4py.util import exec_utils
-import pkgutil
 from pm4py.algo.conformance.alignments.edit_distance import algorithm as logs_alignments
 
 
-datas = ['Small', 'Medium', 'Large', 'Huge', 'Wide', 'credit-card', 'mccloud',
-         'Road_Traffic', 'b17'] 
+# datas = ['Small', 'Medium', 'Large', 'Huge', 'Wide', 'credit-card', 'mccloud',
+#          'Road_Traffic', 'b17'] 
+datas = ['Small'] #change
 rate = ['1.00'] # change
 cost = list()
 
@@ -27,8 +24,7 @@ for data in datas:
     
     # Aligner.TR
     for r in rate:
-    ##  os.path.join(parent_path,"input", "encoded_anomaly", data + ".csv")
-        before = pd.read_csv(os.path.join(parent_path,"input", "encoded_anomaly", data + ".csv"))
+        before = pd.read_csv(os.path.join(parent_path,"input", "encoded_normal", data + ".csv"))
         after = pd.read_csv(os.path.join(parent_path,"input", "encoded_anomaly", data + "_"+ r + ".csv")  )
     ##
         before = before[['Case', 'Activity', "Complete.Timestamp", "Event"]]
@@ -39,11 +35,8 @@ for data in datas:
                             "Timestamp": "time:timestamp", "type_res_trace": "label"})
 
         clean = after[after.label.isnull() ]
-        # anomaly = after[~after.label.isnull() ]
         clean = clean.reset_index(drop=True)
-        # anomaly = anomaly.reset_index(drop=True)
         anomaly = after.reset_index(drop=True)
-        
         
         clean = clean[["case:concept:name", "concept:name","time:timestamp" ]]
         anomaly = anomaly[["case:concept:name", "concept:name","time:timestamp" ]]
@@ -56,12 +49,9 @@ for data in datas:
         log = log_converter.apply(clean)
         log2 = log_converter.apply(anomaly)
 
-
         start= datetime.datetime.now()
         net, initial_marking, final_marking = inductive_miner.apply(log)
-
         alignments = algorithm.apply_log(log2, net, initial_marking, final_marking)
-
 
         end= datetime.datetime.now()
         
@@ -78,8 +68,6 @@ for data in datas:
         for i in alignments:
             if i is None:
                 print("None!!")
-                #print(w)
-
 
             else:
                 act_l = list()
@@ -100,23 +88,17 @@ for data in datas:
                     score = score + 1
 
 
-
-
         d = {'Case':case2_l,'Activity':act3_l}
         df = pd.DataFrame(d)
 
         # print(1-score/length)
-        os.chdir("~\\log_repairing_extension\\alignment\\result_trd")
+        os.chdir(os.path.join(my_path, "result_trd"))
         df.to_csv(data+ "_" + r + ".csv", index= False)
-        
-
 
     # Aligner.ED
     for r in rate:
-    ##
-        before = pd.read_csv(os.path.join(parent_path,"input", "encoded_anomaly", data + ".csv"))
+        before = pd.read_csv(os.path.join(parent_path,"input", "encoded_normal", data + ".csv"))
         after = pd.read_csv(os.path.join(parent_path,"input", "encoded_anomaly", data + "_"+ r + ".csv")  )
-    ##
     ##
         before = before[['Case', 'Activity', "Complete.Timestamp", "Event"]]
         before = before.rename(columns={"Case": "case:concept:name", "Activity": "concept:name",
@@ -124,7 +106,6 @@ for data in datas:
         after = after[['Case', 'Activity', "Timestamp", "type_res_trace"]]
         after = after.rename(columns={"Case": "case:concept:name", "Activity": "concept:name",
                             "Timestamp": "time:timestamp", "type_res_trace": "label"})
-
         
         clean = after[after.label.isnull() ]
         clean = clean.reset_index(drop=True)
@@ -185,8 +166,7 @@ for data in datas:
 
         d = {'Case':case2_l,'Activity':act3_l}
         df = pd.DataFrame(d)
-
-        os.chdir("~\\log_repairing_extension\\alignment\\result_edit")
+        os.chdir(os.path.join(my_path, "result_edit"))
         df.to_csv(data+ "_" + r + ".csv", index= False)
     
 print(cost)

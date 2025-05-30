@@ -15,10 +15,8 @@ pio.renderers.default = 'iframe_connected'
 
 my_path = os.path.abspath('')
 
-from PIL import Image, ImageDraw
 import random
 from matplotlib.colors import ListedColormap
-from collections import deque
 
 
 def discover_NBG(clean, vis = False):
