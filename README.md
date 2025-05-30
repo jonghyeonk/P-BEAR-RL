@@ -31,6 +31,9 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
 ## A detailed performance comparison by each anomalous pattern
 ![](additional_performance.png)
 
+## Requirements
+pandas==2.2.2; numpy==1.26.4; pm4py==2.7.15.2; plotly==5.24.1; networkx==3.3; matplotlib==3.9.2; arrow==1.2.3; tensorflow==2.19.0; tqdm==4.66.5; ipython==8.27.0
+
 
 ## References
 
