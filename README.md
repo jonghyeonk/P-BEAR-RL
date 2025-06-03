@@ -28,7 +28,7 @@ For all logs, we injected 5 types of anomaly patterns including "insert", "skip"
 
 &#x1F53A; Before running the code, in the folders named as 'normaldata', 'encoded_normal' and 'encoded_anomaly', you may need to put full datasets downloadable in following repository: https://drive.google.com/file/d/1Y9ZxyqzBGjjiRtgRJfm-O4WWZFSYDG3Q/view?usp=sharing
 
-## A detailed performance comparison by each anomalous pattern
+## A detailed performance comparison by each anomaly pattern
 ![](additional_performance.png)
 
 ## Requirements
